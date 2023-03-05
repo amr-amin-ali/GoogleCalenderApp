@@ -139,35 +139,42 @@ namespace GoogleCalenderApp.Presentation
 
         public async Task CreateEvent(string title, string description, DateTime startDateTime, DateTime endDateTime)
         {
-            // create service
-            var service = new CalendarService(new BaseClientService.Initializer()
+            try
             {
-                ApplicationName = Models.AppSettings.GetAppSettings().ApplicationName,// "Amr Amin",
-                HttpClientInitializer = await _authManager.Authenticate()
-            });
-            // Create a new event object
-            Event newEvent = new Event()
+                // create service
+                var service = new CalendarService(new BaseClientService.Initializer()
+                {
+                    ApplicationName = Models.AppSettings.GetAppSettings().ApplicationName,// "Amr Amin",
+                    HttpClientInitializer = await _authManager.Authenticate()
+                });
+                // Create a new event object
+                Event newEvent = new Event()
+                {
+                    Summary = title,
+                    Description = description,
+                    Start = new EventDateTime()
+                    {
+                        DateTime = startDateTime,
+                    },
+                    End = new EventDateTime()
+                    {
+                        DateTime = endDateTime,
+                    },
+
+                };
+
+                // Insert the event
+                EventsResource.InsertRequest request = service.Events.Insert(newEvent, "primary");
+                Event createdEvent = request.Execute();
+
+                _logger.Log($"Event created, link to event:\n\t {createdEvent.HtmlLink}");
+                bool result = await _notifier.Notify($"Event created, link to event:\n\t {createdEvent.HtmlLink}");
+                if (result) _logger.Log("Email verification was sent to your inbox");
+            }
+            catch (Exception ex)
             {
-                Summary = title,
-                Description = description,
-                Start = new EventDateTime()
-                {
-                    DateTime = startDateTime,
-                },
-                End = new EventDateTime()
-                {
-                    DateTime = endDateTime,
-                },
-
-            };
-
-            // Insert the event
-            EventsResource.InsertRequest request = service.Events.Insert(newEvent, "primary");
-            Event createdEvent = request.Execute();
-
-            _logger.Log($"Event created, link to event:\n\t {createdEvent.HtmlLink}");
-            bool result = await _notifier.Notify($"Event created, link to event:\n\t {createdEvent.HtmlLink}");
-            if (result) _logger.Log("Email verification was sent to your inbox");
+                _logger.Log($"Error creating your event: {ex.Message}");
+            }
 
 
         }
